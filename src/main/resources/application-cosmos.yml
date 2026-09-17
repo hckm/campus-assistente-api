@@ -1,0 +1,36 @@
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+
+azure:
+  cosmos:
+    enabled: true
+    endpoint: ${AZURE_COSMOS_ENDPOINT:}
+    autenticacao: ${AZURE_COSMOS_AUTENTICACAO:MANAGED_IDENTITY}
+    managed-identity-client-id: ${AZURE_COSMOS_MANAGED_IDENTITY_CLIENT_ID:}
+    emulator-key: ${AZURE_COSMOS_EMULATOR_KEY:}
+
+catalogo:
+  backend: COSMOS
+
+persistencia:
+  backend: COSMOS
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+
+azure:
+  cosmos:
+    endpoint: ${COSMOS_EMULATOR_ENDPOINT:https://localhost:8081}
+    autenticacao: EMULATOR
+    emulator-key: ${COSMOS_EMULATOR_KEY:}
+    provisioning:
+      enabled: ${AZURE_COSMOS_PROVISIONING_ENABLED:true}
+    seed:
+      enabled: ${AZURE_COSMOS_SEED_ENABLED:true}

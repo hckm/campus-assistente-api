@@ -1,0 +1,14 @@
+{
+  "estabelecimentoId": "renovo",
+  "nome": "",
+  "tipo": "farmacia de manipulacao",
+  "horarioFuncionamento": "",
+  "endereco": "",
+  "formasPagamento": "",
+  "condicoesParcelamento": "",
+  "entrega": "Entregamos apenas nas cidades atendidas configuradas.",
+  "cidadesAtendidas": [],
+  "uf": "",
+  "telefone": "",
+  "site": "https://www.renovomanipulacao.com.br/"
+}

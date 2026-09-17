@@ -1,0 +1,85 @@
+{
+  "automatic": true,
+  "indexingMode": "consistent",
+  "includedPaths": [
+    {
+      "path": "/*"
+    }
+  ],
+  "excludedPaths": [
+    {
+      "path": "/descricao/?"
+    },
+    {
+      "path": "/urlCatalogo/?"
+    },
+    {
+      "path": "/categoria/?"
+    },
+    {
+      "path": "/produto/?"
+    },
+    {
+      "path": "/precoOriginalCentavos/?"
+    },
+    {
+      "path": "/legacyId/?"
+    }
+  ],
+  "compositeIndexes": [
+    [
+      {
+        "path": "/tipo",
+        "order": "ascending"
+      },
+      {
+        "path": "/codigoCatalogo",
+        "order": "ascending"
+      }
+    ],
+    [
+      {
+        "path": "/tipo",
+        "order": "ascending"
+      },
+      {
+        "path": "/categoriaNormalizada",
+        "order": "ascending"
+      }
+    ],
+    [
+      {
+        "path": "/tipo",
+        "order": "ascending"
+      },
+      {
+        "path": "/categoriaNormalizada",
+        "order": "ascending"
+      },
+      {
+        "path": "/produtoNormalizado",
+        "order": "ascending"
+      }
+    ],
+    [
+      {
+        "path": "/tipo",
+        "order": "ascending"
+      },
+      {
+        "path": "/produtoNormalizado",
+        "order": "ascending"
+      }
+    ],
+    [
+      {
+        "path": "/tipo",
+        "order": "ascending"
+      },
+      {
+        "path": "/precoAtualCentavos",
+        "order": "ascending"
+      }
+    ]
+  ]
+}

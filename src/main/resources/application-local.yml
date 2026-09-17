@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:campus_ia_chatbot;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  timeout-seconds: ${GEMINI_TIMEOUT_SECONDS:5}
+
+estabelecimento:
+  cidades-atendidas: ${ESTABELECIMENTO_CIDADES_ATENDIDAS:}
+  uf: ${ESTABELECIMENTO_UF:}
+  site: ${ESTABELECIMENTO_SITE:https://www.renovomanipulacao.com.br/}

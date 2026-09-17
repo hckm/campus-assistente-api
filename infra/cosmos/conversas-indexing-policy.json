@@ -1,0 +1,83 @@
+{
+  "automatic": true,
+  "indexingMode": "consistent",
+  "includedPaths": [
+    {
+      "path": "/*"
+    }
+  ],
+  "excludedPaths": [
+    {
+      "path": "/telefoneCliente/?"
+    },
+    {
+      "path": "/nomeCliente/?"
+    },
+    {
+      "path": "/mensagemCliente/?"
+    },
+    {
+      "path": "/respostaGerada/?"
+    },
+    {
+      "path": "/motivoEncaminhamento/?"
+    },
+    {
+      "path": "/conteudo/?"
+    },
+    {
+      "path": "/payloadHash/?"
+    },
+    {
+      "path": "/resultado/*"
+    }
+  ],
+  "compositeIndexes": [
+    [
+      {
+        "path": "/tipo",
+        "order": "ascending"
+      },
+      {
+        "path": "/dataProcessamento",
+        "order": "descending"
+      },
+      {
+        "path": "/atendimentoId",
+        "order": "descending"
+      }
+    ],
+    [
+      {
+        "path": "/tipo",
+        "order": "ascending"
+      },
+      {
+        "path": "/status",
+        "order": "ascending"
+      },
+      {
+        "path": "/dataProcessamento",
+        "order": "descending"
+      },
+      {
+        "path": "/atendimentoId",
+        "order": "descending"
+      }
+    ],
+    [
+      {
+        "path": "/tipo",
+        "order": "ascending"
+      },
+      {
+        "path": "/atendimentoId",
+        "order": "ascending"
+      },
+      {
+        "path": "/sequencia",
+        "order": "descending"
+      }
+    ]
+  ]
+}

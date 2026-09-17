@@ -1,0 +1,34 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:campus_ia_chatbot;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+
+gemini:
+  api-key:
+  model: gemini-2.5-flash
+  base-url: https://generativelanguage.googleapis.com
+  timeout-seconds: 5
+
+estabelecimento:
+  nome: Farmacia Teste
+  tipo: farmacia de manipulacao
+  horario-funcionamento: Segunda a sexta das 08:00 as 18:00
+  endereco: Rua Teste, 123
+  formas-pagamento: Pix, cartao de credito e cartao de debito
+  entrega: Entregamos apenas nas cidades atendidas configuradas.
+  cidades-atendidas:
+    - Iacanga
+  uf: SP
+  telefone: (14) 99999-9999
+  site: https://www.renovomanipulacao.com.br/
+
+cep-lookup:
+  enabled: true
+  base-url: https://viacep.com.br
+  timeout-seconds: 5

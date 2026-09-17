@@ -1,0 +1,28 @@
+name: campus-ia-cosmos
+
+services:
+  emulator:
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-latest@sha256:6ce44ed4ac69cf69a6cb7982d0536cfaa22696172168fc9fe9a722a189d38f99
+    container_name: campus-ia-cosmos
+    environment:
+      PROTOCOL: https
+      EXPLORER_PROTOCOL: http
+      ENABLE_EXPLORER: "true"
+      ENABLE_TELEMETRY: "false"
+      LOG_LEVEL: warn
+    ports:
+      - "127.0.0.1:8081:8081"
+      - "127.0.0.1:18080:8080"
+      - "127.0.0.1:1234:1234"
+    volumes:
+      - campus-ia-cosmos-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 20s
+
+volumes:
+  campus-ia-cosmos-data:
+    name: campus-ia-cosmos-data

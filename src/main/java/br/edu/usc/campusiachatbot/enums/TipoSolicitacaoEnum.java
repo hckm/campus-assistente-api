@@ -1,0 +1,16 @@
+package br.edu.usc.campusiachatbot.enums;
+
+public enum TipoSolicitacaoEnum {
+    ORCAMENTO_FORMULA,
+    COMPRA_PRODUTO,
+    STATUS_PEDIDO,
+    ENVIO_RECEITA,
+    RECOMPRA,
+    HORARIO_FUNCIONAMENTO,
+    ENTREGA,
+    FORMAS_PAGAMENTO,
+    DUVIDA_ADMINISTRATIVA,
+    DUVIDA_FARMACEUTICA,
+    RECLAMACAO,
+    OUTROS
+}

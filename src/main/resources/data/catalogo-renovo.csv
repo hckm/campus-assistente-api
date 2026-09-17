@@ -1,0 +1,20 @@
+id,produto,descricao,categoria,preco_atual,preco_original,url_catalogo
+1,Sérum Facial Anti-Age,Sérum rejuvenescedor com retinol e vitamina C — combate rugas e manchas — 30ml,Beleza,82,99.9,https://www.renovomanipulacao.com.br/beleza
+2,Protetor Solar FPS 50,Proteção completa UVA/UVB com textura leve e base hidratante — 200ml,Saúde,80,59.9,https://www.renovomanipulacao.com.br/saude
+3,Gel para Contorno dos Olhos,"Reduz olheiras, inchaço e sinais de cansaço ao redor dos olhos — 15ml",Beleza,49.9,69.9,https://www.renovomanipulacao.com.br/beleza
+4,Vitaminas Imunidade,Blend de Vitamina C + D + Zinco para fortalecer o sistema imunológico — 60 cápsulas,Desempenho Físico,50,69.9,https://www.renovomanipulacao.com.br/desempenho-fisico
+5,Vitamina C Facial 20%,Iluminador e antioxidante potente para pele radiante e uniforme — 30ml,Saúde,89.9,119.9,https://www.renovomanipulacao.com.br/saude
+6,Pré-Treino Explosão,"Energia, foco e bomba muscular para treinos de alta intensidade — 30 doses",Desempenho Físico,69.9,89.9,https://www.renovomanipulacao.com.br/desempenho-fisico
+7,Whey Protein Isolado Baunilha,Proteína isolada de alta absorção para ganho de massa magra — 1kg,Desempenho Físico,129.9,179.9,https://www.renovomanipulacao.com.br/desempenho-fisico
+8,Termogênico Fat Burner,Queimador de gordura potente com termogênicos naturais — 60 cápsulas,Emagrecimento,84.9,119.9,https://www.renovomanipulacao.com.br/emagrecimento
+9,Albumina em Pó Natural,Proteína de clara de ovo para suplementação proteica de qualidade — 500g,Saúde,54.9,69.9,https://www.renovomanipulacao.com.br/saude
+10,Magnésio Dimalato,"Relaxamento muscular, melhora do sono e equilíbrio energético — 60 cápsulas",Saúde,44.9,54.9,https://www.renovomanipulacao.com.br/saude
+11,Colágeno Hidrolisado Tipo I e II,"Suporte para ossos, cartilagens e elasticidade da pele — 300g pó",Beleza,89.9,,https://www.renovomanipulacao.com.br/beleza
+12,Controlador de Apetite Natural,Substituto de refeição sabor chocolate com proteínas e nutrientes essenciais — 450g,Emagrecimento,75.5,79.9,https://www.renovomanipulacao.com.br/emagrecimento
+13,Suplemento Feminino Premium,"Equilíbrio hormonal, bem-estar e vitalidade feminina — 60 cápsulas",Mulher,55.8,119.9,https://www.renovomanipulacao.com.br/mulher
+14,Ciclo Feminino Herbal,Alivia sintomas de TPM e irregularidade menstrual com fitoterápicos — 30 cápsulas,Mulher,68,74.9,https://www.renovomanipulacao.com.br/mulher
+15,Shampoo Fortalecedor Capilar,Fortalecimento e brilho para cabelos frágeis com proteínas e pantenol — 300ml,Beleza,48.9,,https://www.renovomanipulacao.com.br/beleza
+16,Bloqueador de Carboidratos,Inibe absorção de amido e açúcar para controle glicêmico e peso corporal — 60 cápsulas,Emagrecimento,54.9,,https://www.renovomanipulacao.com.br/emagrecimento
+17,ZMA Testosterone Support,"Zinco, magnésio e vitamina B6 para testosterona, recuperação e sono — 60 cápsulas",Desempenho Físico,59.9,,https://www.renovomanipulacao.com.br/desempenho-fisico
+18,Detox 10 Dias,Limpeza do organismo e redução do inchaço com fitoterápicos depurativos — 10 doses,Emagrecimento,39.9,,https://www.renovomanipulacao.com.br/emagrecimento
+19,Creatina Monoidratada,Força e resistência muscular com aumento de performance esportiva — 300g,Desempenho Físico,49.9,,https://www.renovomanipulacao.com.br/desempenho-fisico

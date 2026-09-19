@@ -264,7 +264,7 @@ AZURE_OPENAI_AUTHENTICATION=MANAGED_IDENTITY
 
 A identidade do App Service precisa de acesso de dados ao Cosmos e do papel `Cognitive Services OpenAI User` no recurso Azure OpenAI. `AZURE_COSMOS_PROVISIONING_ENABLED` e `AZURE_COSMOS_SEED_ENABLED` permanecem `false` por padrão em produção, para que a identidade da aplicação não crie recursos nem altere dados na inicialização. Provisionamento, atribuição de RBAC, validação contra recursos reais, migração de dados e deploy ainda precisam ser executados em ambiente autorizado.
 
-Para ambientes descartaveis, `AZURE_COSMOS_RESET_ON_STARTUP=true` remove o database configurado antes de recriar os containers. Essa opcao exige tambem `AZURE_COSMOS_PROVISIONING_ENABLED=true` e `AZURE_COSMOS_SEED_ENABLED=true`. Cada inicializacao apaga permanentemente catalogo, estabelecimento, conversas e qualquer outro dado armazenado nesse database. Nao use com mais de uma instancia da aplicacao iniciando ao mesmo tempo.
+Para ambientes descartaveis, `AZURE_COSMOS_RESET_ON_STARTUP=true` remove todos os documentos dos containers configurados de conversas, catalogo e estabelecimentos antes de executar novamente a carga inicial. O database e os containers permanecem existentes porque a identidade gerenciada possui acesso ao plano de dados, nao ao provisionamento estrutural do Cosmos. Essa opcao exige tambem `AZURE_COSMOS_PROVISIONING_ENABLED=true` e `AZURE_COSMOS_SEED_ENABLED=true`. Cada inicializacao apaga permanentemente os dados desses tres containers. Nao use com mais de uma instancia da aplicacao iniciando ao mesmo tempo.
 
 ## Executar localmente com H2
 

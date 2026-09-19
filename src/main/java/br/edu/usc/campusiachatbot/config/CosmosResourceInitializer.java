@@ -1,9 +1,13 @@
 package br.edu.usc.campusiachatbot.config;
 
 import com.azure.cosmos.CosmosClient;
+import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
 import com.azure.cosmos.CosmosException;
+import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosContainerProperties;
+import com.azure.cosmos.models.CosmosQueryRequestOptions;
+import com.azure.cosmos.models.PartitionKey;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -26,6 +30,11 @@ public class CosmosResourceInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        if (properties.getAutenticacao() == CosmosProperties.Autenticacao.MANAGED_IDENTITY) {
+            inicializarComIdentidadeGerenciada();
+            return;
+        }
+
         if (properties.getProvisioning().isResetOnStartup()) {
             resetDatabase();
         }
@@ -42,12 +51,37 @@ public class CosmosResourceInitializer implements ApplicationRunner {
         ));
     }
 
-    private void resetDatabase() {
-        if (!properties.getSeed().isEnabled()) {
-            throw new IllegalStateException(
-                    "Reset do Cosmos exige azure.cosmos.seed.enabled=true para nao recriar o database vazio"
-            );
+    private void inicializarComIdentidadeGerenciada() {
+        if (!properties.getProvisioning().isResetOnStartup()) {
+            log.info("Provisionamento estrutural do Cosmos ignorado com identidade gerenciada; database e containers devem existir");
+            return;
         }
+
+        validarCargaInicialParaReset();
+        CosmosDatabase database = client.getDatabase(properties.getDatabase());
+        log.warn("Reset destrutivo habilitado: removendo todos os documentos dos containers Cosmos configurados");
+        limparContainer(database, properties.getConversasContainer(), "clienteChave");
+        limparContainer(database, properties.getCatalogoContainer(), "catalogoId");
+        limparContainer(database, properties.getEstabelecimentosContainer(), "estabelecimentoId");
+    }
+
+    private void limparContainer(CosmosDatabase database, String containerId, String partitionKeyProperty) {
+        CosmosContainer container = database.getContainer(containerId);
+        String query = "SELECT c.id, c." + partitionKeyProperty + " AS partitionKey FROM c";
+        int removidos = 0;
+        for (ResetItem item : container.queryItems(query, new CosmosQueryRequestOptions(), ResetItem.class)) {
+            container.deleteItem(
+                    item.id(),
+                    item.partitionKey() == null ? PartitionKey.NONE : new PartitionKey(item.partitionKey()),
+                    new CosmosItemRequestOptions()
+            );
+            removidos++;
+        }
+        log.warn("Reset do Cosmos removeu {} documento(s) do container {}", removidos, containerId);
+    }
+
+    private void resetDatabase() {
+        validarCargaInicialParaReset();
 
         log.warn("Reset destrutivo habilitado: removendo o database Cosmos {}", properties.getDatabase());
         try {
@@ -57,5 +91,16 @@ public class CosmosResourceInitializer implements ApplicationRunner {
                 throw exception;
             }
         }
+    }
+
+    private void validarCargaInicialParaReset() {
+        if (!properties.getSeed().isEnabled()) {
+            throw new IllegalStateException(
+                    "Reset do Cosmos exige azure.cosmos.seed.enabled=true para nao recriar os dados vazios"
+            );
+        }
+    }
+
+    public record ResetItem(String id, String partitionKey) {
     }
 }

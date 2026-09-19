@@ -218,6 +218,47 @@ class ChatbotServiceTest {
     }
 
     @Test
+    void deveResponderTelefoneEufConfiguradosSemAtendimentoHumano() {
+        ChatbotResponseDTO telefone = chatbotService.processarMensagem(new ChatbotRequestDTO(
+                "14999999991",
+                "Maria",
+                "Qual e o telefone da loja?",
+                OrigemMensagemEnum.WHATSAPP
+        ), OrigemMensagemEnum.SIMULADOR);
+        ChatbotResponseDTO uf = chatbotService.processarMensagem(new ChatbotRequestDTO(
+                "14999999992",
+                "Joao",
+                "Qual a UF do estabelecimento?",
+                OrigemMensagemEnum.WHATSAPP
+        ), OrigemMensagemEnum.SIMULADOR);
+
+        assertThat(telefone.necessitaAtendimentoHumano()).isFalse();
+        assertThat(telefone.respostaGerada()).contains("(14) 99999-9999");
+        assertThat(uf.necessitaAtendimentoHumano()).isFalse();
+        assertThat(uf.respostaGerada()).contains("SP");
+    }
+
+    @Test
+    void deveResponderDadosCombinadosDoEstabelecimento() {
+        ChatbotRequestDTO request = new ChatbotRequestDTO(
+                "14999999993",
+                "Maria",
+                "Informe o endereco, as cidades atendidas, o estado e o telefone.",
+                OrigemMensagemEnum.WHATSAPP
+        );
+
+        ChatbotResponseDTO response = chatbotService.processarMensagem(request, OrigemMensagemEnum.SIMULADOR);
+
+        assertThat(response.necessitaAtendimentoHumano()).isFalse();
+        assertThat(response.respostaGerada())
+                .contains("Rua Teste, 123")
+                .contains("Iacanga")
+                .contains("UF: SP")
+                .contains("(14) 99999-9999");
+        assertThat(response.confianca()).isEqualTo(100.0);
+    }
+
+    @Test
     void deveResponderEntregaViaCorreioParaTodoBrasil() {
         ChatbotRequestDTO request = new ChatbotRequestDTO(
                 "14999999999",

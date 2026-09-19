@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -349,6 +350,11 @@ public class ChatbotService {
             EnderecoEnriquecidoDTO enderecoEnriquecido,
             boolean compraEmAndamento
     ) {
+        InterpretacaoIaResponseDTO dadosCombinados = responderDadosEstabelecimentoCombinados(texto);
+        if (dadosCombinados != null) {
+            return dadosCombinados;
+        }
+
         if (contem(texto, "horario", "funcionamento", "abre", "fecha")) {
             if (estabelecimento().hasHorarioFuncionamento()) {
                 return new InterpretacaoIaResponseDTO(
@@ -371,6 +377,42 @@ public class ChatbotService {
                     true,
                     "Horario de funcionamento nao configurado para o estabelecimento.",
                     100.0
+            );
+        }
+
+        if (pedeTelefone(texto)) {
+            if (estabelecimento().hasTelefone()) {
+                return respostaAdministrativa(
+                        "O telefone de " + estabelecimento().nomeOuPadrao() + " e: "
+                                + estabelecimento().telefone().trim() + "."
+                );
+            }
+            return respostaAdministrativaNaoConfigurada(
+                    "Ainda nao tenho o telefone configurado. Vou encaminhar para a equipe confirmar essa informacao.",
+                    "Telefone nao configurado para o estabelecimento."
+            );
+        }
+
+        if (pedeUf(texto)) {
+            if (estabelecimento().hasUf()) {
+                return respostaAdministrativa(
+                        "A UF de " + estabelecimento().nomeOuPadrao() + " e: "
+                                + estabelecimento().uf().trim() + "."
+                );
+            }
+            return respostaAdministrativaNaoConfigurada(
+                    "Ainda nao tenho a UF configurada. Vou encaminhar para a equipe confirmar essa informacao.",
+                    "UF nao configurada para o estabelecimento."
+            );
+        }
+
+        if (pedeCidadesAtendidas(texto)) {
+            if (estabelecimento().hasCidadesAtendidas()) {
+                return respostaAdministrativa("As cidades atendidas sao: " + cidadesAtendidasTexto() + ".");
+            }
+            return respostaAdministrativaNaoConfigurada(
+                    "Ainda nao tenho as cidades atendidas configuradas. Vou encaminhar para a equipe confirmar essa informacao.",
+                    "Cidades atendidas nao configuradas para o estabelecimento."
             );
         }
 
@@ -497,6 +539,84 @@ public class ChatbotService {
         }
 
         return null;
+    }
+
+    private InterpretacaoIaResponseDTO responderDadosEstabelecimentoCombinados(String texto) {
+        boolean horario = contem(texto, "horario", "funcionamento", "abre", "fecha");
+        boolean endereco = contem(texto, "endereco", "localizacao", "onde fica");
+        boolean cidades = pedeCidadesAtendidas(texto);
+        boolean uf = pedeUf(texto);
+        boolean telefone = pedeTelefone(texto);
+        int quantidade = (horario ? 1 : 0)
+                + (endereco ? 1 : 0)
+                + (cidades ? 1 : 0)
+                + (uf ? 1 : 0)
+                + (telefone ? 1 : 0);
+        if (quantidade < 2) {
+            return null;
+        }
+
+        List<String> dados = new ArrayList<>();
+        if (horario) {
+            dados.add("horario: " + estabelecimento().horarioFuncionamentoOuNaoInformado());
+        }
+        if (endereco) {
+            dados.add("endereco: " + estabelecimento().enderecoOuNaoInformado());
+        }
+        if (cidades) {
+            dados.add("cidades atendidas: " + estabelecimento().cidadesAtendidasOuNaoInformado());
+        }
+        if (uf) {
+            dados.add("UF: " + estabelecimento().ufOuNaoInformado());
+        }
+        if (telefone) {
+            dados.add("telefone: " + estabelecimento().telefoneOuNaoInformado());
+        }
+        return respostaAdministrativa(
+                "Dados de " + estabelecimento().nomeOuPadrao() + ": " + String.join("; ", dados) + "."
+        );
+    }
+
+    private boolean pedeTelefone(String texto) {
+        return contem(texto, "telefone", "contato", "whatsapp");
+    }
+
+    private boolean pedeUf(String texto) {
+        return texto.equals("uf") || contem(
+                texto,
+                "qual a uf",
+                "qual o estado",
+                "estado da loja",
+                "estado do estabelecimento",
+                "estado e",
+                "estado,"
+        );
+    }
+
+    private boolean pedeCidadesAtendidas(String texto) {
+        return contem(texto, "cidades atendidas", "quais cidades", "cidades o motoboy", "onde o motoboy atende");
+    }
+
+    private InterpretacaoIaResponseDTO respostaAdministrativa(String resposta) {
+        return new InterpretacaoIaResponseDTO(
+                TipoSolicitacaoEnum.DUVIDA_ADMINISTRATIVA,
+                CategoriaAtendimentoEnum.ATENDIMENTO_ADMINISTRATIVO,
+                resposta,
+                false,
+                null,
+                100.0
+        );
+    }
+
+    private InterpretacaoIaResponseDTO respostaAdministrativaNaoConfigurada(String resposta, String motivo) {
+        return new InterpretacaoIaResponseDTO(
+                TipoSolicitacaoEnum.DUVIDA_ADMINISTRATIVA,
+                CategoriaAtendimentoEnum.ATENDIMENTO_ADMINISTRATIVO,
+                resposta,
+                true,
+                motivo,
+                100.0
+        );
     }
 
     private boolean historicoIndicaCompra(List<MensagemConversa> historico, String mensagemAtual) {

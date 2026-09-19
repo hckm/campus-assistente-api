@@ -20,6 +20,7 @@ azure:
     catalogo-batch-max-bytes: ${AZURE_COSMOS_CATALOGO_BATCH_MAX_BYTES:1900000}
     provisioning:
       enabled: ${AZURE_COSMOS_PROVISIONING_ENABLED:false}
+      reset-on-startup: ${AZURE_COSMOS_RESET_ON_STARTUP:false}
     seed:
       enabled: ${AZURE_COSMOS_SEED_ENABLED:false}
     autenticacao: ${AZURE_COSMOS_AUTENTICACAO:MANAGED_IDENTITY}

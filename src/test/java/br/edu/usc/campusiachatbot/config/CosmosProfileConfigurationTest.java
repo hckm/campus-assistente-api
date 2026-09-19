@@ -26,6 +26,7 @@ class CosmosProfileConfigurationTest {
             assertThat(environment.getProperty("azure.cosmos.emulator-key"))
                     .isEqualTo("chave-emulador");
             assertThat(environment.getProperty("azure.cosmos.provisioning.enabled")).isEqualTo("true");
+            assertThat(environment.getProperty("azure.cosmos.provisioning.reset-on-startup")).isEqualTo("false");
             assertThat(environment.getProperty("azure.cosmos.seed.enabled")).isEqualTo("true");
         }
     }
@@ -43,6 +44,7 @@ class CosmosProfileConfigurationTest {
                     .isEqualTo("MANAGED_IDENTITY");
             assertThat(environment.getProperty("azure.cosmos.emulator-key")).isEmpty();
             assertThat(environment.getProperty("azure.cosmos.provisioning.enabled")).isEqualTo("false");
+            assertThat(environment.getProperty("azure.cosmos.provisioning.reset-on-startup")).isEqualTo("false");
             assertThat(environment.getProperty("azure.cosmos.seed.enabled")).isEqualTo("false");
         }
     }

@@ -171,9 +171,8 @@ public class CosmosCatalogoStore implements CatalogoStore {
     public List<String> listarCategoriasLimitadas(int limite) {
         int limiteValidado = validarLimite(limite);
         List<SqlParameter> parameters = parametrosBase();
-        parameters.add(new SqlParameter("@limite", limiteValidado));
         SqlQuerySpec querySpec = new SqlQuerySpec(
-                "SELECT DISTINCT TOP @limite c.categoria, c.categoriaNormalizada FROM c "
+                "SELECT DISTINCT c.categoria, c.categoriaNormalizada FROM c "
                         + "WHERE c.catalogoId = @catalogoId AND c.tipo = @tipo "
                         + "ORDER BY c.categoriaNormalizada ASC",
                 parameters
@@ -186,7 +185,7 @@ public class CosmosCatalogoStore implements CatalogoStore {
                     validarCategoriaDocument(document);
                     categorias.add(document.getCategoria());
                 }));
-        return List.copyOf(categorias);
+        return categorias.stream().limit(limiteValidado).toList();
     }
 
     @Override

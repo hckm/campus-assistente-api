@@ -1,14 +1,18 @@
 {
   "estabelecimentoId": "renovo",
-  "nome": "",
+  "nome": "Renovo Manipulação",
   "tipo": "farmacia de manipulacao",
-  "horarioFuncionamento": "",
-  "endereco": "",
+  "horarioFuncionamento": "Segunda a sexta das 08:00 às 18:00; sábado das 08:00 às 12:00",
+  "endereco": "Av. Joaquim Pedro de Oliveira, 397, Iacanga - SP, 17180-027",
   "formasPagamento": "",
   "condicoesParcelamento": "",
   "entrega": "Entregamos apenas nas cidades atendidas configuradas.",
-  "cidadesAtendidas": [],
-  "uf": "",
-  "telefone": "",
-  "site": "https://www.renovomanipulacao.com.br/"
+  "cidadesAtendidas": [
+    "Iacanga",
+    "Arealva",
+    "Reginópolis"
+  ],
+  "uf": "SP",
+  "telefone": "(14) 99747-6540",
+  "site": "https://hckm.github.io/renovo-portal-web"
 }

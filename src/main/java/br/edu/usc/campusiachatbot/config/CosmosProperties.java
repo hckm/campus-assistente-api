@@ -61,6 +61,12 @@ public class CosmosProperties {
     private int catalogoBatchMaxBytes = 1900000;
 
     @NotNull
+    private Provisioning provisioning = new Provisioning();
+
+    @NotNull
+    private Seed seed = new Seed();
+
+    @NotNull
     private Autenticacao autenticacao = Autenticacao.MANAGED_IDENTITY;
 
     private String managedIdentityClientId;
@@ -104,5 +110,20 @@ public class CosmosProperties {
     public enum Autenticacao {
         MANAGED_IDENTITY,
         EMULATOR
+    }
+
+    @Getter
+    @Setter
+    public static class Provisioning {
+
+        private boolean enabled;
+        private boolean resetOnStartup;
+    }
+
+    @Getter
+    @Setter
+    public static class Seed {
+
+        private boolean enabled;
     }
 }

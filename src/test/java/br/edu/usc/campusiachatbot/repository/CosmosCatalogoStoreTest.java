@@ -367,26 +367,25 @@ class CosmosCatalogoStoreTest {
     }
 
     @Test
-    void categoriasLimitadasConsultamSomenteMetadadosComTopParametrizado() {
-        CategoriaCatalogoDocument categoria = new CategoriaCatalogoDocument();
-        categoria.setCategoria("FACIAL");
-        categoria.setCategoriaNormalizada("facial");
+    void categoriasLimitadasAplicamLimiteDepoisDoDistinct() {
+        CategoriaCatalogoDocument facial = categoria("FACIAL");
+        CategoriaCatalogoDocument capilar = categoria("CAPILAR");
+        CategoriaCatalogoDocument saude = categoria("SAUDE");
         CosmosPagedIterable<CategoriaCatalogoDocument> paged = mock(CosmosPagedIterable.class);
         FeedResponse<CategoriaCatalogoDocument> page = mock(FeedResponse.class);
-        when(page.getResults()).thenReturn(List.of(categoria));
+        when(page.getResults()).thenReturn(List.of(capilar, facial, saude));
         when(paged.iterableByPage()).thenReturn(List.of(page));
         when(container.queryItems(any(SqlQuerySpec.class), any(CosmosQueryRequestOptions.class),
                 eq(CategoriaCatalogoDocument.class))).thenReturn(paged);
 
-        assertThat(store.listarCategoriasLimitadas(8)).containsExactly("FACIAL");
+        assertThat(store.listarCategoriasLimitadas(2)).containsExactly("CAPILAR", "FACIAL");
 
         ArgumentCaptor<SqlQuerySpec> queryCaptor = ArgumentCaptor.forClass(SqlQuerySpec.class);
         verify(container).queryItems(queryCaptor.capture(), any(CosmosQueryRequestOptions.class),
                 eq(CategoriaCatalogoDocument.class));
         assertThat(queryCaptor.getValue().getQueryText())
-                .contains("SELECT DISTINCT TOP @limite c.categoria, c.categoriaNormalizada")
-                .doesNotContain("SELECT *");
-        assertThat(valorParametro(queryCaptor.getValue(), "@limite", Integer.class)).isEqualTo(8);
+                .contains("SELECT DISTINCT c.categoria, c.categoriaNormalizada")
+                .doesNotContain("SELECT *", "TOP @limite");
     }
 
     @Test
@@ -447,6 +446,13 @@ class CosmosCatalogoStoreTest {
                 null,
                 null
         );
+    }
+
+    private CategoriaCatalogoDocument categoria(String nome) {
+        CategoriaCatalogoDocument categoria = new CategoriaCatalogoDocument();
+        categoria.setCategoria(nome);
+        categoria.setCategoriaNormalizada(nome.toLowerCase());
+        return categoria;
     }
 
     private <T> T valorParametro(SqlQuerySpec spec, String nome, Class<T> tipo) {

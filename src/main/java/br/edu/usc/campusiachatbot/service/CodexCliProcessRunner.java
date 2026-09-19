@@ -227,6 +227,7 @@ public class CodexCliProcessRunner {
         processo.destroy();
         aguardarEncerramento(processo, 200);
         processos.forEach(processoRastreado -> destruir(processoRastreado, true));
+        aguardarEncerramento(processos, 300);
         if (processo.isAlive()) {
             processo.destroyForcibly();
         }
@@ -255,6 +256,22 @@ public class CodexCliProcessRunner {
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    private void aguardarEncerramento(List<ProcessoRastreado> processos, long milissegundos) {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(milissegundos);
+        while (processos.stream().anyMatch(this::estaVivo)
+                && System.nanoTime() < deadline
+                && !Thread.currentThread().isInterrupted()) {
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(5));
+        }
+    }
+
+    private boolean estaVivo(ProcessoRastreado processoRastreado) {
+        return ProcessHandle.of(processoRastreado.pid())
+                .filter(ProcessHandle::isAlive)
+                .filter(processoRastreado::corresponde)
+                .isPresent();
     }
 
     private void fecharStreamsAssincrono(Process processo) {

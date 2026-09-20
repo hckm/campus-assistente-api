@@ -90,7 +90,9 @@ Quando o cliente nao especifica modalidade, o chatbot informa todas as opcoes. Q
 
 O adaptador usa Chat Completions API v1 em `https://<recurso>.openai.azure.com/openai/v1/chat/completions`. `AZURE_OPENAI_ENDPOINT` aceita o endpoint raiz do recurso ou o mesmo endpoint terminado em `/openai/v1`. Um endpoint de projeto Foundry no formato `https://<recurso>.services.ai.azure.com/api/projects/<projeto>` não é aceito por este adaptador.
 
-O nome configurado em `AZURE_OPENAI_DEPLOYMENT` é enviado no campo `model`. O código não escolhe um modelo. A resposta usa JSON Schema com `strict=true` e também é validada localmente. Recusa, filtro de conteúdo, truncamento, JSON inválido, timeout, 401, 403, 429 e 5xx acionam a classificação local segura. Mensagens sem consulta de produtos fazem uma inferencia. Uma busca de catalogo valida pode fazer uma segunda inferencia com resultados limitados. O adaptador não repete requisições automaticamente.
+O nome configurado em `AZURE_OPENAI_DEPLOYMENT` é enviado no campo `model`. O código não escolhe um modelo. A resposta final usa JSON Schema com `strict=true` e também é validada localmente. Recusa, filtro de conteúdo, truncamento, JSON inválido, timeout, 401, 403, 429 e 5xx acionam a classificação local segura. O adaptador não repete requisições automaticamente.
+
+Quando o Azure OpenAI está selecionado, o modelo pode solicitar ferramentas somente de leitura para listar categorias, buscar produtos por categoria, nome ou faixa de preço e consultar dados oficiais do estabelecimento. O backend valida o nome e todos os argumentos, limita resultados e tamanho do contexto, executa a consulta e devolve os fatos ao modelo para que ele prepare a resposta final. Uma expressão isolada, como `Emagrecimento`, pode ser tratada como categoria e, se não houver resultado, como nome de produto. São permitidas no máximo quatro rodadas e seis chamadas de ferramenta por atendimento, sem ferramenta de escrita, criação de pedido ou alteração no Cosmos DB.
 
 | Variavel | Padrao | Descricao |
 |---|---|---|
@@ -109,6 +111,7 @@ No Azure App Service, use `MANAGED_IDENTITY` e atribua à identidade o papel `Co
 Documentação oficial:
 
 - [Structured Outputs no Azure OpenAI](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/structured-outputs)
+- [Function calling no Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/how-to/function-calling)
 - [Chat Completions API v1](https://learn.microsoft.com/en-us/azure/foundry/openai/latest)
 - [Identidade gerenciada em aplicações Java hospedadas no Azure](https://learn.microsoft.com/en-us/azure/developer/java/sdk/authentication/azure-hosted-apps)
 

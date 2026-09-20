@@ -76,6 +76,57 @@ class AzureOpenAiClientTest {
                 .containsExactly("type");
     }
 
+    @Test
+    void deveEnviarFerramentasEExtrairChamadaDeFuncao() throws Exception {
+        AtomicReference<JsonNode> requestBody = new AtomicReference<>();
+        iniciarServidor(exchange -> {
+            requestBody.set(objectMapper.readTree(exchange.getRequestBody()));
+            responder(exchange, 200, """
+                    {
+                      "choices": [{
+                        "finish_reason": "tool_calls",
+                        "message": {
+                          "content": null,
+                          "tool_calls": [{
+                            "id": "call_123",
+                            "type": "function",
+                            "function": {
+                              "name": "buscar_produtos_por_categoria",
+                              "arguments": "{\\\"categoria\\\":\\\"Emagrecimento\\\"}"
+                            }
+                          }]
+                        }
+                      }]
+                    }
+                    """);
+        });
+        List<Map<String, Object>> tools = List.of(Map.of(
+                "type", "function",
+                "function", Map.of(
+                        "name", "buscar_produtos_por_categoria",
+                        "parameters", Map.of("type", "object")
+                )
+        ));
+
+        AzureOpenAiChatResponse response = client(Duration.ofSeconds(2), 65536)
+                .obterRespostaComFerramentas(
+                        List.of(Map.of("role", "user", "content", "Emagrecimento")),
+                        tools
+                );
+
+        assertThat(response.content()).isNull();
+        assertThat(response.toolCalls()).containsExactly(new AzureOpenAiToolCall(
+                "call_123",
+                "buscar_produtos_por_categoria",
+                "{\"categoria\":\"Emagrecimento\"}"
+        ));
+        JsonNode body = requestBody.get();
+        assertThat(body.path("tools")).hasSize(1);
+        assertThat(body.path("tool_choice").asText()).isEqualTo("auto");
+        assertThat(body.path("parallel_tool_calls").asBoolean()).isFalse();
+        assertThat(body.path("response_format").path("type").asText()).isEqualTo("json_schema");
+    }
+
     @ParameterizedTest
     @MethodSource("errosHttp")
     void deveClassificarErrosHttpSemRepetirChamada(

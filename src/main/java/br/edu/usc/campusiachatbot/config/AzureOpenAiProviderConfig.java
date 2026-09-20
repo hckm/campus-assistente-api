@@ -5,6 +5,7 @@ import br.edu.usc.campusiachatbot.client.AzureOpenAiAuthentication;
 import br.edu.usc.campusiachatbot.client.AzureOpenAiClient;
 import br.edu.usc.campusiachatbot.client.AzureOpenAiManagedIdentityAuthentication;
 import br.edu.usc.campusiachatbot.service.AzureOpenAiInterpretacaoService;
+import br.edu.usc.campusiachatbot.service.AzureOpenAiToolExecutor;
 import br.edu.usc.campusiachatbot.service.CatalogoInterpretacaoOrchestrator;
 import br.edu.usc.campusiachatbot.service.InterpretacaoIaService;
 import com.azure.identity.ManagedIdentityCredentialBuilder;
@@ -25,6 +26,7 @@ public class AzureOpenAiProviderConfig {
     InterpretacaoIaService azureOpenAiInterpretacaoService(
             AzureOpenAiProperties properties,
             CatalogoInterpretacaoOrchestrator orchestrator,
+            AzureOpenAiToolExecutor toolExecutor,
             ObjectMapper objectMapper
     ) {
         properties.validarSelecionado();
@@ -45,7 +47,8 @@ public class AzureOpenAiProviderConfig {
         );
         return new AzureOpenAiInterpretacaoService(
                 client,
-                orchestrator
+                orchestrator,
+                toolExecutor
         );
     }
 

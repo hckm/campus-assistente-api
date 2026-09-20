@@ -2,6 +2,7 @@ package br.edu.usc.campusiachatbot.config;
 
 import br.edu.usc.campusiachatbot.CampusIaChatbotApplication;
 import br.edu.usc.campusiachatbot.service.AzureOpenAiInterpretacaoService;
+import br.edu.usc.campusiachatbot.service.AzureOpenAiToolExecutor;
 import br.edu.usc.campusiachatbot.service.CatalogoInterpretacaoOrchestrator;
 import br.edu.usc.campusiachatbot.service.InterpretacaoIaService;
 import br.edu.usc.campusiachatbot.service.LocalInterpretacaoService;
@@ -23,6 +24,7 @@ class AzureOpenAiProviderConfigTest {
             .withConfiguration(AutoConfigurations.of(ConfigurationPropertiesAutoConfiguration.class))
             .withUserConfiguration(AzureOpenAiProviderConfig.class)
             .withBean(CatalogoInterpretacaoOrchestrator.class, () -> mock(CatalogoInterpretacaoOrchestrator.class))
+            .withBean(AzureOpenAiToolExecutor.class, () -> mock(AzureOpenAiToolExecutor.class))
             .withBean(ObjectMapper.class, ObjectMapper::new);
 
     @Test

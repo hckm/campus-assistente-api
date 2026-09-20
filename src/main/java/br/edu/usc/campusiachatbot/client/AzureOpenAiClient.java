@@ -17,6 +17,8 @@ import java.net.http.HttpTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -58,11 +60,35 @@ public class AzureOpenAiClient {
     }
 
     public String obterRespostaEstruturada(List<Map<String, Object>> messages) {
+        AzureOpenAiChatResponse response = executar(messages, List.of());
+        if (response.hasToolCalls() || response.content() == null || response.content().isBlank()) {
+            throw respostaInvalida();
+        }
+        return response.content();
+    }
+
+    public AzureOpenAiChatResponse obterRespostaComFerramentas(
+            List<Map<String, Object>> messages,
+            List<Map<String, Object>> tools
+    ) {
+        if (tools == null || tools.isEmpty()) {
+            throw new IllegalArgumentException("Ao menos uma ferramenta deve ser informada");
+        }
+        return executar(messages, tools);
+    }
+
+    private AzureOpenAiChatResponse executar(
+            List<Map<String, Object>> messages,
+            List<Map<String, Object>> tools
+    ) {
         long deadline = System.nanoTime() + timeout.toNanos();
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(chatCompletionsUri)
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(serializarRequisicao(messages), StandardCharsets.UTF_8));
+                .POST(HttpRequest.BodyPublishers.ofString(
+                        serializarRequisicao(messages, tools),
+                        StandardCharsets.UTF_8
+                ));
         authentication.apply(requestBuilder);
         requestBuilder.timeout(tempoRestante(deadline));
 
@@ -77,7 +103,7 @@ public class AzureOpenAiClient {
             if (response.statusCode() != 200) {
                 throw mapearErroHttp(response.statusCode(), body);
             }
-            return extrairConteudo(body);
+            return extrairResposta(body);
         } catch (TimeoutException exception) {
             responseFuture.cancel(true);
             throw new AzureOpenAiClientException(
@@ -131,20 +157,27 @@ public class AzureOpenAiClient {
         return Duration.ofNanos(nanos);
     }
 
-    private String serializarRequisicao(List<Map<String, Object>> messages) {
-        Map<String, Object> request = Map.of(
-                "model", deployment,
-                "messages", messages,
-                "max_completion_tokens", maxOutputTokens,
-                "response_format", Map.of(
-                        "type", "json_schema",
-                        "json_schema", Map.of(
-                                "name", "interpretacao_atendimento",
-                                "strict", true,
-                                "schema", InterpretacaoIaSchema.criar()
-                        )
+    private String serializarRequisicao(
+            List<Map<String, Object>> messages,
+            List<Map<String, Object>> tools
+    ) {
+        Map<String, Object> request = new LinkedHashMap<>();
+        request.put("model", deployment);
+        request.put("messages", messages);
+        request.put("max_completion_tokens", maxOutputTokens);
+        request.put("response_format", Map.of(
+                "type", "json_schema",
+                "json_schema", Map.of(
+                        "name", "interpretacao_atendimento",
+                        "strict", true,
+                        "schema", InterpretacaoIaSchema.criar()
                 )
-        );
+        ));
+        if (!tools.isEmpty()) {
+            request.put("tools", tools);
+            request.put("tool_choice", "auto");
+            request.put("parallel_tool_calls", false);
+        }
         try {
             return objectMapper.writeValueAsString(request);
         } catch (JsonProcessingException exception) {
@@ -156,7 +189,7 @@ public class AzureOpenAiClient {
         }
     }
 
-    private String extrairConteudo(String body) {
+    private AzureOpenAiChatResponse extrairResposta(String body) {
         try {
             JsonNode root = objectMapper.readTree(body);
             JsonNode choice = root.path("choices").path(0);
@@ -181,6 +214,9 @@ public class AzureOpenAiClient {
                         "Azure OpenAI encerrou a resposta por limite de tokens"
                 );
             }
+            if ("tool_calls".equals(finishReason)) {
+                return extrairFerramentas(message.path("tool_calls"));
+            }
             if (!"stop".equals(finishReason)) {
                 throw respostaInvalida();
             }
@@ -188,7 +224,7 @@ public class AzureOpenAiClient {
             if (!content.isTextual() || content.textValue().isBlank()) {
                 throw respostaInvalida();
             }
-            return content.textValue();
+            return new AzureOpenAiChatResponse(content.textValue(), List.of());
         } catch (AzureOpenAiClientException exception) {
             throw exception;
         } catch (JsonProcessingException exception) {
@@ -198,6 +234,28 @@ public class AzureOpenAiClient {
                     exception
             );
         }
+    }
+
+    private AzureOpenAiChatResponse extrairFerramentas(JsonNode toolCallsNode) {
+        if (!toolCallsNode.isArray() || toolCallsNode.isEmpty()) {
+            throw respostaInvalida();
+        }
+        List<AzureOpenAiToolCall> toolCalls = new ArrayList<>();
+        for (JsonNode toolCallNode : toolCallsNode) {
+            String id = toolCallNode.path("id").asText("");
+            String type = toolCallNode.path("type").asText("");
+            JsonNode function = toolCallNode.path("function");
+            String name = function.path("name").asText("");
+            String arguments = function.path("arguments").asText("");
+            if (id.isBlank()
+                    || !"function".equals(type)
+                    || name.isBlank()
+                    || arguments.isBlank()) {
+                throw respostaInvalida();
+            }
+            toolCalls.add(new AzureOpenAiToolCall(id, name, arguments));
+        }
+        return new AzureOpenAiChatResponse(null, toolCalls);
     }
 
     private AzureOpenAiClientException mapearErroHttp(int statusCode, String body) {

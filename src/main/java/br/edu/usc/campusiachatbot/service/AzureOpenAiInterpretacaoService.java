@@ -15,13 +15,16 @@ public class AzureOpenAiInterpretacaoService implements InterpretacaoIaService {
 
     private final AzureOpenAiClient client;
     private final CatalogoInterpretacaoOrchestrator orchestrator;
+    private final AzureOpenAiToolExecutor toolExecutor;
 
     public AzureOpenAiInterpretacaoService(
             AzureOpenAiClient client,
-            CatalogoInterpretacaoOrchestrator orchestrator
+            CatalogoInterpretacaoOrchestrator orchestrator,
+            AzureOpenAiToolExecutor toolExecutor
     ) {
         this.client = client;
         this.orchestrator = orchestrator;
+        this.toolExecutor = toolExecutor;
     }
 
     @Override
@@ -34,8 +37,9 @@ public class AzureOpenAiInterpretacaoService implements InterpretacaoIaService {
                 request,
                 enderecoEnriquecido,
                 historico,
-                contents -> client.obterRespostaEstruturada(converterMensagens(contents)),
-                "AZURE_OPENAI"
+                contents -> toolExecutor.executar(client, converterMensagens(contents)),
+                "AZURE_OPENAI",
+                true
         );
     }
 

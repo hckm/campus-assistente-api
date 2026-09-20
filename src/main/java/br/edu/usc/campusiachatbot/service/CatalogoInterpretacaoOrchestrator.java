@@ -64,10 +64,22 @@ public class CatalogoInterpretacaoOrchestrator {
             InferenciaIa inferencia,
             String provedor
     ) {
+        return interpretar(request, enderecoEnriquecido, historico, inferencia, provedor, false);
+    }
+
+    public InterpretacaoIaResponseDTO interpretar(
+            ChatbotRequestDTO request,
+            EnderecoEnriquecidoDTO enderecoEnriquecido,
+            List<MensagemConversa> historico,
+            InferenciaIa inferencia,
+            String provedor,
+            boolean ferramentasDisponiveis
+    ) {
         List<Map<String, Object>> contents = promptBuilderService.construirContents(
                 request,
                 enderecoEnriquecido,
-                historico
+                historico,
+                ferramentasDisponiveis
         );
         RespostaInterpretacaoIaInterna planejamento;
         boolean primeiraInferenciaDisponivel = true;

@@ -79,13 +79,14 @@ public class CatalogoInterpretacaoOrchestrator {
             primeiraInferenciaDisponivel = false;
             planejamento = planejamentoLocal(request.mensagem());
         }
+        boolean categoriaPorFinalidade = mensagemDefineCategoriaPorFinalidade(request.mensagem());
 
         if ((planejamento.solicitarCategorias() || planejamento.consultaCatalogo() != null)
                 && !fluxoCatalogoPermitido(planejamento)) {
             return planejamento.respostaPublica();
         }
 
-        if (planejamento.solicitarCategorias()) {
+        if (planejamento.solicitarCategorias() && !categoriaPorFinalidade) {
             if (planejamento.consultaCatalogo() != null) {
                 return respostaRefinamentoInvalido(planejamento);
             }
@@ -95,7 +96,7 @@ public class CatalogoInterpretacaoOrchestrator {
         ConsultaCatalogoIa consultaMensagem = inferirConsultaCatalogo(request.mensagem());
         ConsultaCatalogoIa consulta = planejamento.consultaCatalogo();
         if (fluxoCatalogoPermitido(planejamento)
-                && (consulta == null || mensagemDefineCategoriaPorFinalidade(request.mensagem()))) {
+                && (consulta == null || categoriaPorFinalidade)) {
             consulta = consultaMensagem;
         }
         if (consulta == null && mensagemSolicitaCategorias(request.mensagem())) {

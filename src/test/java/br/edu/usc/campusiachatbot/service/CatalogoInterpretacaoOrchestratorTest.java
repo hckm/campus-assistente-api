@@ -225,6 +225,22 @@ class CatalogoInterpretacaoOrchestratorTest {
     }
 
     @Test
+    void categoriaExplicitaPrevaleceSobrePedidoGenericoDeCategoriasDaIa() {
+        when(catalogoStore.listarPorCategoriaLimitada("emagrecimento", 8))
+                .thenReturn(List.of(produto("Emagrecimento", "Detox 10 Dias", "39.90")));
+        InferenciaSequencial inferencia = new InferenciaSequencial(
+                resposta(null, true, "Qual categoria voce deseja?"),
+                resposta(null, false, "O Detox 10 Dias custa R$ 39,90.")
+        );
+
+        InterpretacaoIaResponseDTO resposta = interpretar("Tem produto para emagrecimento?", inferencia);
+
+        assertThat(resposta.respostaGerada()).contains("Detox 10 Dias", "39,90");
+        verify(catalogoStore).listarPorCategoriaLimitada("emagrecimento", 8);
+        verify(catalogoStore, never()).listarCategoriasLimitadas(8);
+    }
+
+    @Test
     void consultaExplicitaDaMensagemPrevaleceSobrePlanejamentoIncorretoDaIa() {
         when(catalogoStore.listarPorCategoriaLimitada("emagrecimento", 8))
                 .thenReturn(List.of(produto("Emagrecimento", "Termogenico", "84.90")));

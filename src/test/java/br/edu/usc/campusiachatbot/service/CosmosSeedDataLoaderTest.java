@@ -13,6 +13,7 @@ import org.springframework.core.io.ResourceLoader;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -24,6 +25,21 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class CosmosSeedDataLoaderTest {
+
+    @Test
+    void arquivoDeProducaoDeveConterFormasDePagamentoDaRenovo() throws Exception {
+        try (var input = Objects.requireNonNull(
+                getClass().getResourceAsStream("/data/estabelecimento-renovo.json")
+        )) {
+            EstabelecimentoComercial estabelecimento = new ObjectMapper().readValue(
+                    input,
+                    EstabelecimentoComercial.class
+            );
+
+            assertThat(estabelecimento.formasPagamento())
+                    .isEqualTo("Pix, cartão de crédito e cartão de débito");
+        }
+    }
 
     @Test
     void deveCarregarEstabelecimentoECatalogoQuandoVazios() throws Exception {

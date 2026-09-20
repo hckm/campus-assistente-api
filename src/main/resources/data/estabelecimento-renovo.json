@@ -4,7 +4,7 @@
   "tipo": "farmacia de manipulacao",
   "horarioFuncionamento": "Segunda a sexta das 08:00 às 18:00; sábado das 08:00 às 12:00",
   "endereco": "Av. Joaquim Pedro de Oliveira, 397, Iacanga - SP, 17180-027",
-  "formasPagamento": "",
+  "formasPagamento": "Pix, cartão de crédito e cartão de débito",
   "condicoesParcelamento": "",
   "entrega": "Entregamos apenas nas cidades atendidas configuradas.",
   "cidadesAtendidas": [

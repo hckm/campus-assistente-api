@@ -70,12 +70,14 @@ public class CatalogoInterpretacaoOrchestrator {
                 historico
         );
         RespostaInterpretacaoIaInterna planejamento;
+        boolean primeiraInferenciaDisponivel = true;
         try {
             planejamento = validarResposta(inferencia.executar(contents));
         } catch (RuntimeException exception) {
             log.warn("Falha na primeira inferencia; provedor={}; tipoFalha={}",
                     provedor, exception.getClass().getSimpleName());
-            return localInterpretacaoService.interpretar(request.mensagem());
+            primeiraInferenciaDisponivel = false;
+            planejamento = planejamentoLocal(request.mensagem());
         }
 
         if ((planejamento.solicitarCategorias() || planejamento.consultaCatalogo() != null)
@@ -90,7 +92,12 @@ public class CatalogoInterpretacaoOrchestrator {
             return listarCategorias(planejamento);
         }
 
+        ConsultaCatalogoIa consultaMensagem = inferirConsultaCatalogo(request.mensagem());
         ConsultaCatalogoIa consulta = planejamento.consultaCatalogo();
+        if (fluxoCatalogoPermitido(planejamento)
+                && (consulta == null || mensagemDefineCategoriaPorFinalidade(request.mensagem()))) {
+            consulta = consultaMensagem;
+        }
         if (consulta == null && mensagemSolicitaCategorias(request.mensagem())) {
             return listarCategorias(planejamento);
         }
@@ -114,6 +121,10 @@ public class CatalogoInterpretacaoOrchestrator {
         }
         if (produtos.isEmpty()) {
             return respostaSemResultado(planejamento);
+        }
+
+        if (!primeiraInferenciaDisponivel) {
+            return respostaDeterministicaProdutos(planejamento, produtos);
         }
 
         try {
@@ -141,8 +152,22 @@ public class CatalogoInterpretacaoOrchestrator {
         } catch (RuntimeException exception) {
             log.warn("Falha na segunda inferencia; provedor={}; tipoFalha={}",
                     provedor, exception.getClass().getSimpleName());
-            return respostaSegundaInferenciaInvalida(planejamento);
+            return respostaDeterministicaProdutos(planejamento, produtos);
         }
+    }
+
+    private RespostaInterpretacaoIaInterna planejamentoLocal(String mensagem) {
+        InterpretacaoIaResponseDTO resposta = localInterpretacaoService.interpretar(mensagem);
+        return new RespostaInterpretacaoIaInterna(
+                resposta.tipoSolicitacao(),
+                resposta.categoria(),
+                resposta.respostaGerada(),
+                Boolean.TRUE.equals(resposta.necessitaAtendimentoHumano()),
+                resposta.motivoEncaminhamento(),
+                resposta.confianca(),
+                false,
+                null
+        );
     }
 
     private InterpretacaoIaResponseDTO listarCategorias(RespostaInterpretacaoIaInterna planejamento) {
@@ -216,7 +241,8 @@ public class CatalogoInterpretacaoOrchestrator {
         }
 
         Matcher categoria = Pattern.compile(
-                "\\bprodutos?\\s+(?:da\\s+categoria\\s+|de\\s+)([a-z0-9 _-]{2,60}?)(?:\\s+voces\\b|\\s+que\\b|$)"
+                "\\bprodutos?\\s+(?:da\\s+categoria\\s+|de\\s+|para\\s+)"
+                        + "([a-z0-9 _-]{2,60}?)(?=\\s+(?:voces|que)\\b|[?!.]*$)"
         ).matcher(texto);
         if (categoria.find()) {
             return new ConsultaCatalogoIa(
@@ -240,6 +266,12 @@ public class CatalogoInterpretacaoOrchestrator {
             );
         }
         return null;
+    }
+
+    private boolean mensagemDefineCategoriaPorFinalidade(String mensagem) {
+        return Pattern.compile("\\bprodutos?\\s+para\\s+[a-z0-9 _-]{2,60}(?:[?!.]|$)")
+                .matcher(normalizar(mensagem))
+                .find();
     }
 
     private BigDecimal decimal(String valor) {
@@ -403,17 +435,6 @@ public class CatalogoInterpretacaoOrchestrator {
                 "Nao consegui consultar o catalogo agora. Vou encaminhar para a equipe confirmar.",
                 true,
                 "Catalogo indisponivel para consulta."
-        );
-    }
-
-    private InterpretacaoIaResponseDTO respostaSegundaInferenciaInvalida(
-            RespostaInterpretacaoIaInterna planejamento
-    ) {
-        return substituirRespostaCatalogo(
-                planejamento,
-                "Localizei dados no catalogo, mas nao consegui preparar uma resposta segura. Vou encaminhar para a equipe confirmar.",
-                true,
-                "Resposta final da IA indisponivel."
         );
     }
 

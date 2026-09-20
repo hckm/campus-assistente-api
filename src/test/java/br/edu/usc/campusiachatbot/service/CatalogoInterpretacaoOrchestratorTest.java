@@ -208,6 +208,43 @@ class CatalogoInterpretacaoOrchestratorTest {
     }
 
     @Test
+    void falhaNaSegundaInferenciaRespondeComProdutosJaLocalizados() {
+        when(catalogoStore.listarPorCategoriaLimitada("emagrecimento", 8))
+                .thenReturn(List.of(produto("Emagrecimento", "Detox 10 Dias", "39.90")));
+        InferenciaSequencial inferencia = new InferenciaSequencial(
+                resposta(consultaCategoria("Emagrecimento"), false, "Consultando.")
+        );
+
+        InterpretacaoIaResponseDTO resposta = interpretar("Tem produto para emagrecimento?", inferencia);
+
+        assertThat(resposta.respostaGerada()).contains("Detox 10 Dias", "39,90");
+        assertThat(resposta.necessitaAtendimentoHumano()).isFalse();
+        assertThat(resposta.tipoSolicitacao()).isEqualTo(TipoSolicitacaoEnum.COMPRA_PRODUTO);
+        assertThat(inferencia.chamadas()).isEqualTo(2);
+        verify(catalogoStore).listarPorCategoriaLimitada("emagrecimento", 8);
+    }
+
+    @Test
+    void consultaExplicitaDaMensagemPrevaleceSobrePlanejamentoIncorretoDaIa() {
+        when(catalogoStore.listarPorCategoriaLimitada("emagrecimento", 8))
+                .thenReturn(List.of(produto("Emagrecimento", "Termogenico", "84.90")));
+        InferenciaSequencial inferencia = new InferenciaSequencial(
+                resposta(consultaProduto("ou nao produto para emagrecimento"), false, "Consultando."),
+                resposta(null, false, "O Termogenico custa R$ 84,90.")
+        );
+
+        InterpretacaoIaResponseDTO resposta = interpretar(
+                "Tem ou nao produto para emagrecimento?",
+                inferencia
+        );
+
+        assertThat(resposta.respostaGerada()).contains("Termogenico", "84,90");
+        verify(catalogoStore).listarPorCategoriaLimitada("emagrecimento", 8);
+        verify(catalogoStore, never()).pesquisarPorProdutoLimitado(
+                "ou nao produto para emagrecimento", 8);
+    }
+
+    @Test
     void segundaInferenciaNaoPodeEncadearTerceiraConsulta() {
         when(catalogoStore.pesquisarPorProdutoLimitado("Serum", 8))
                 .thenReturn(List.of(produto("FACIAL", "Serum", "79.90")));
@@ -309,6 +346,32 @@ class CatalogoInterpretacaoOrchestratorTest {
         assertThat(resposta.tipoSolicitacao()).isEqualTo(TipoSolicitacaoEnum.DUVIDA_FARMACEUTICA);
         assertThat(resposta.necessitaAtendimentoHumano()).isTrue();
         verifyNoInteractions(catalogoStore);
+    }
+
+    @Test
+    void falhaNaPrimeiraInferenciaAindaConsultaCategoriaExplicita() {
+        when(catalogoStore.listarPorCategoriaLimitada("emagrecimento", 8))
+                .thenReturn(List.of(produto("Emagrecimento", "Bloqueador de Carboidratos", "54.90")));
+        InferenciaIa inferencia = contents -> {
+            throw new IllegalStateException("falha simulada");
+        };
+
+        InterpretacaoIaResponseDTO resposta = orchestrator.interpretar(
+                new ChatbotRequestDTO(
+                        "14999999999",
+                        "Cliente",
+                        "Tem produto para emagrecimento?",
+                        null
+                ),
+                EnderecoEnriquecidoDTO.vazio(),
+                List.of(),
+                inferencia,
+                "TESTE"
+        );
+
+        assertThat(resposta.respostaGerada()).contains("Bloqueador de Carboidratos", "54,90");
+        assertThat(resposta.necessitaAtendimentoHumano()).isFalse();
+        verify(catalogoStore).listarPorCategoriaLimitada("emagrecimento", 8);
     }
 
     private InterpretacaoIaResponseDTO interpretar(String mensagem, InferenciaSequencial inferencia) {

@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
 class CosmosSeedDataLoaderTest {
 
     @Test
-    void arquivoDeProducaoDeveConterFormasDePagamentoDaRenovo() throws Exception {
+    void arquivoDeProducaoDeveConterFormasECondicoesDePagamentoDaRenovo() throws Exception {
         try (var input = Objects.requireNonNull(
                 getClass().getResourceAsStream("/data/estabelecimento-renovo.json")
         )) {
@@ -38,6 +38,8 @@ class CosmosSeedDataLoaderTest {
 
             assertThat(estabelecimento.formasPagamento())
                     .isEqualTo("Pix, cartão de crédito e cartão de débito");
+            assertThat(estabelecimento.condicoesParcelamento())
+                    .isEqualTo("Em até 3 vezes sem juros");
         }
     }
 

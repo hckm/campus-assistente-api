@@ -41,19 +41,19 @@ public class AzureOpenAiToolExecutor {
     private static final List<Map<String, Object>> FERRAMENTAS = List.of(
             ferramenta(
                     LISTAR_CATEGORIAS,
-                    "Lista as categorias reais disponíveis no catálogo. Use quando o cliente perguntar genericamente pelos tipos de produto.",
+                    "Lista as categorias reais disponíveis no catálogo. Use quando o cliente perguntar genericamente pelos tipos de produto ou indicar uma finalidade sem informar o nome exato da categoria.",
                     Map.of(),
                     List.of()
             ),
             ferramenta(
                     BUSCAR_POR_CATEGORIA,
-                    "Busca produtos reais por categoria. Use também quando a mensagem do cliente for apenas o nome provável de uma categoria.",
+                    "Busca produtos reais por categoria. Use o nome exato obtido em listar_categorias quando o cliente descrever apenas uma finalidade.",
                     Map.of("categoria", campoTexto("Categoria informada pelo cliente.")),
                     List.of("categoria")
             ),
             ferramenta(
                     BUSCAR_POR_NOME,
-                    "Busca produtos reais por nome ou parte do nome. Não use para sintomas, diagnóstico, dose ou indicação clínica.",
+                    "Busca produtos reais por nome ou parte do nome. Não use uma finalidade, como emagrecer, como nome de produto. Não use para sintomas, diagnóstico, dose ou indicação clínica.",
                     Map.of("termo", campoTexto("Nome ou parte do nome do produto.")),
                     List.of("termo")
             ),

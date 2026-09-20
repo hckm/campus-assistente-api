@@ -131,6 +131,8 @@ class PromptBuilderServiceTest {
                 .contains("Ferramentas de consulta estao disponiveis")
                 .contains("palavra ou expressao isolada")
                 .contains("consulte primeiro a categoria")
+                .contains("produto para emagrecer")
+                .contains("nome exato da categoria semanticamente correspondente")
                 .contains("solicitarCategorias como false")
                 .contains("consultaCatalogo como null");
     }

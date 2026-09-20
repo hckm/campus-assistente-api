@@ -98,6 +98,15 @@ public class CatalogoInterpretacaoOrchestrator {
             return planejamento.respostaPublica();
         }
 
+        if (ferramentasDisponiveis && primeiraInferenciaDisponivel) {
+            if (!planejamento.solicitarCategorias() && planejamento.consultaCatalogo() == null) {
+                return planejamento.respostaPublica();
+            }
+            log.warn("Resposta final do provedor com ferramentas solicitou o fluxo legado; provedor={}", provedor);
+            planejamento = planejamentoLocal(request.mensagem());
+            primeiraInferenciaDisponivel = false;
+        }
+
         if (planejamento.solicitarCategorias() && !categoriaPorFinalidade) {
             if (planejamento.consultaCatalogo() != null) {
                 return respostaRefinamentoInvalido(planejamento);

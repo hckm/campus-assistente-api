@@ -230,6 +230,94 @@ class AzureOpenAiInterpretacaoServiceTest {
         verify(store).listarPorCategoriaLimitada("Emagrecimento", 8);
     }
 
+    @Test
+    void devePreservarRespostaDaFerramentaSemExecutarFluxoLegadoNovamente() {
+        CatalogoStore store = mock(CatalogoStore.class);
+        CatalogoConsultaProperties properties = new CatalogoConsultaProperties(8, 6000, 12000);
+        EstabelecimentoComercialProvider estabelecimento = () -> new EstabelecimentoProperties(
+                "Renovo Manipulação",
+                "farmacia de manipulacao",
+                "08:00 às 18:00",
+                "Av. Teste, 397",
+                "Pix e cartão",
+                null,
+                "Entrega configurada",
+                List.of("Iacanga"),
+                "SP",
+                "(14) 99999-9999",
+                "https://example.test"
+        );
+        ObjectMapper mapper = new ObjectMapper();
+        PromptBuilderService promptBuilder = new PromptBuilderService(estabelecimento);
+        CatalogoInterpretacaoOrchestrator orchestratorReal = new CatalogoInterpretacaoOrchestrator(
+                promptBuilder,
+                new LocalInterpretacaoService(),
+                store,
+                properties,
+                mapper
+        );
+        AzureOpenAiToolExecutor executorReal = new AzureOpenAiToolExecutor(
+                store,
+                estabelecimento,
+                properties,
+                mapper
+        );
+        AzureOpenAiClient clientReal = mock(AzureOpenAiClient.class);
+        ProdutoCatalogo produto = new ProdutoCatalogo(
+                "produto:18",
+                null,
+                18,
+                "Emagrecimento",
+                "Detox 10 Dias",
+                "Descrição segura",
+                new BigDecimal("39.90"),
+                null,
+                "https://example.test/emagrecimento"
+        );
+        when(store.listarPorCategoriaLimitada("Emagrecimento", 8)).thenReturn(List.of(produto));
+        when(clientReal.obterRespostaComFerramentas(any(), any())).thenReturn(
+                new AzureOpenAiChatResponse(null, List.of(new AzureOpenAiToolCall(
+                        "call_categoria",
+                        "buscar_produtos_por_categoria",
+                        "{\"categoria\":\"Emagrecimento\"}"
+                ))),
+                new AzureOpenAiChatResponse("""
+                        {
+                          "tipoSolicitacao": "COMPRA_PRODUTO",
+                          "categoria": "ATENDIMENTO_COMERCIAL",
+                          "respostaGerada": "Para emagrecimento temos Detox 10 Dias por R$ 39,90.",
+                          "necessitaAtendimentoHumano": false,
+                          "motivoEncaminhamento": null,
+                          "confianca": 98,
+                          "solicitarCategorias": false,
+                          "consultaCatalogo": null
+                        }
+                        """, List.of())
+        );
+        AzureOpenAiInterpretacaoService serviceReal = new AzureOpenAiInterpretacaoService(
+                clientReal,
+                orchestratorReal,
+                executorReal
+        );
+        ChatbotRequestDTO perguntaReal = new ChatbotRequestDTO(
+                "14999999999",
+                "Cliente",
+                "Qual o produto que vc tem para emagrecer?",
+                null
+        );
+
+        InterpretacaoIaResponseDTO resposta = serviceReal.interpretarMensagem(
+                perguntaReal,
+                EnderecoEnriquecidoDTO.vazio(),
+                List.of()
+        );
+
+        assertThat(resposta.respostaGerada()).contains("Detox 10 Dias", "39,90");
+        assertThat(resposta.necessitaAtendimentoHumano()).isFalse();
+        verify(store).listarPorCategoriaLimitada("Emagrecimento", 8);
+        verify(store, org.mockito.Mockito.never()).pesquisarPorProdutoLimitado("para emagrecer", 8);
+    }
+
     private InterpretacaoIaResponseDTO fallback() {
         return new InterpretacaoIaResponseDTO(
                 TipoSolicitacaoEnum.OUTROS,

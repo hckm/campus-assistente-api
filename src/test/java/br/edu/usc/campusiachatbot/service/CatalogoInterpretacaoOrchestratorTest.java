@@ -2,11 +2,13 @@ package br.edu.usc.campusiachatbot.service;
 
 import br.edu.usc.campusiachatbot.config.CatalogoConsultaProperties;
 import br.edu.usc.campusiachatbot.config.EstabelecimentoProperties;
+import br.edu.usc.campusiachatbot.domain.MensagemConversa;
 import br.edu.usc.campusiachatbot.domain.ProdutoCatalogo;
 import br.edu.usc.campusiachatbot.dto.ChatbotRequestDTO;
 import br.edu.usc.campusiachatbot.dto.EnderecoEnriquecidoDTO;
 import br.edu.usc.campusiachatbot.dto.InterpretacaoIaResponseDTO;
 import br.edu.usc.campusiachatbot.enums.CategoriaAtendimentoEnum;
+import br.edu.usc.campusiachatbot.enums.DirecaoMensagemEnum;
 import br.edu.usc.campusiachatbot.enums.TipoSolicitacaoEnum;
 import br.edu.usc.campusiachatbot.store.CatalogoStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -418,6 +420,86 @@ class CatalogoInterpretacaoOrchestratorTest {
         assertThat(resposta.respostaGerada()).contains("Detox 10 Dias", "39,90");
         assertThat(resposta.necessitaAtendimentoHumano()).isFalse();
         verify(catalogoStore).listarPorCategoriaLimitada("Emagrecimento", 8);
+    }
+
+    @Test
+    void confirmacaoCurtaRetomaConsultaDeCategoriaDaConversa() {
+        when(catalogoStore.listarPorCategoriaLimitada("emagrecer", 8)).thenReturn(List.of());
+        when(catalogoStore.listarCategoriasLimitadas(CatalogoStore.LIMITE_MAXIMO_CONSULTA_IA))
+                .thenReturn(List.of("Beleza", "Emagrecimento", "Saúde"));
+        when(catalogoStore.listarPorCategoriaLimitada("Emagrecimento", 8))
+                .thenReturn(List.of(produto("Emagrecimento", "Detox 10 Dias", "39.90")));
+        InferenciaSequencial inferencia = new InferenciaSequencial(respostaClassificada(
+                "OUTROS",
+                "OUTROS",
+                null,
+                false,
+                "Recebemos sua mensagem. Vou direcionar seu atendimento para a equipe responsavel."
+        ));
+        List<MensagemConversa> historico = List.of(
+                new MensagemConversa(
+                        DirecaoMensagemEnum.CLIENTE,
+                        "Qual o produto que vocês têm para emagrecer?"
+                ),
+                new MensagemConversa(
+                        DirecaoMensagemEnum.BOT,
+                        "Temos uma categoria específica chamada 'Emagrecimento' em nosso catálogo. Posso listar os produtos disponíveis nessa categoria para você?"
+                ),
+                new MensagemConversa(
+                        DirecaoMensagemEnum.CLIENTE,
+                        "por favor"
+                )
+        );
+
+        InterpretacaoIaResponseDTO resposta = orchestrator.interpretar(
+                new ChatbotRequestDTO("14999999999", "Cliente", "por favor", null),
+                EnderecoEnriquecidoDTO.vazio(),
+                historico,
+                inferencia,
+                "AZURE_OPENAI",
+                true
+        );
+
+        assertThat(resposta.respostaGerada()).contains("Detox 10 Dias", "39,90");
+        assertThat(resposta.tipoSolicitacao()).isEqualTo(TipoSolicitacaoEnum.COMPRA_PRODUTO);
+        assertThat(resposta.necessitaAtendimentoHumano()).isFalse();
+        verify(catalogoStore).listarPorCategoriaLimitada("Emagrecimento", 8);
+    }
+
+    @Test
+    void confirmacaoCurtaNaoRetomaConsultaAntigaDepoisDeMudarDeAssunto() {
+        InferenciaSequencial inferencia = new InferenciaSequencial(respostaClassificada(
+                "OUTROS",
+                "OUTROS",
+                null,
+                false,
+                "Como posso ajudar?"
+        ));
+        List<MensagemConversa> historico = List.of(
+                new MensagemConversa(
+                        DirecaoMensagemEnum.CLIENTE,
+                        "Qual o produto que vocês têm para emagrecer?"
+                ),
+                new MensagemConversa(
+                        DirecaoMensagemEnum.BOT,
+                        "Posso listar os produtos da categoria Emagrecimento."
+                ),
+                new MensagemConversa(DirecaoMensagemEnum.CLIENTE, "Qual o horário?"),
+                new MensagemConversa(DirecaoMensagemEnum.BOT, "Atendemos das 8h às 18h."),
+                new MensagemConversa(DirecaoMensagemEnum.CLIENTE, "por favor")
+        );
+
+        InterpretacaoIaResponseDTO resposta = orchestrator.interpretar(
+                new ChatbotRequestDTO("14999999999", "Cliente", "por favor", null),
+                EnderecoEnriquecidoDTO.vazio(),
+                historico,
+                inferencia,
+                "AZURE_OPENAI",
+                true
+        );
+
+        assertThat(resposta.respostaGerada()).isEqualTo("Como posso ajudar?");
+        verifyNoInteractions(catalogoStore);
     }
 
     private InterpretacaoIaResponseDTO interpretar(String mensagem, InferenciaSequencial inferencia) {

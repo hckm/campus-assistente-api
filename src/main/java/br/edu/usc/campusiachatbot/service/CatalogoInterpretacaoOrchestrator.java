@@ -7,6 +7,7 @@ import br.edu.usc.campusiachatbot.dto.ChatbotRequestDTO;
 import br.edu.usc.campusiachatbot.dto.EnderecoEnriquecidoDTO;
 import br.edu.usc.campusiachatbot.dto.InterpretacaoIaResponseDTO;
 import br.edu.usc.campusiachatbot.enums.CategoriaAtendimentoEnum;
+import br.edu.usc.campusiachatbot.enums.DirecaoMensagemEnum;
 import br.edu.usc.campusiachatbot.enums.TipoSolicitacaoEnum;
 import br.edu.usc.campusiachatbot.store.CatalogoStore;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -50,6 +51,19 @@ public class CatalogoInterpretacaoOrchestrator {
     );
     private static final int MAX_TERMO = 160;
     private static final BigDecimal MAX_PRECO = new BigDecimal("99999999.99");
+    private static final Set<String> CONFIRMACOES_CURTAS = Set.of(
+            "sim",
+            "por favor",
+            "sim por favor",
+            "pode",
+            "pode sim",
+            "pode listar",
+            "pode mostrar",
+            "claro",
+            "quero ver",
+            "mostre por favor",
+            "liste por favor"
+    );
 
     private final PromptBuilderService promptBuilderService;
     private final LocalInterpretacaoService localInterpretacaoService;
@@ -92,13 +106,18 @@ public class CatalogoInterpretacaoOrchestrator {
             planejamento = planejamentoLocal(request.mensagem());
         }
         boolean categoriaPorFinalidade = mensagemDefineCategoriaPorFinalidade(request.mensagem());
+        ConsultaCatalogoIa consultaContinuidade = inferirConsultaCatalogoDaConversa(
+                request.mensagem(),
+                historico
+        );
 
-        if ((planejamento.solicitarCategorias() || planejamento.consultaCatalogo() != null)
+        if (consultaContinuidade == null
+                && (planejamento.solicitarCategorias() || planejamento.consultaCatalogo() != null)
                 && !fluxoCatalogoPermitido(planejamento)) {
             return planejamento.respostaPublica();
         }
 
-        if (ferramentasDisponiveis && primeiraInferenciaDisponivel) {
+        if (ferramentasDisponiveis && primeiraInferenciaDisponivel && consultaContinuidade == null) {
             if (!planejamento.solicitarCategorias() && planejamento.consultaCatalogo() == null) {
                 return planejamento.respostaPublica();
             }
@@ -107,7 +126,7 @@ public class CatalogoInterpretacaoOrchestrator {
             primeiraInferenciaDisponivel = false;
         }
 
-        if (planejamento.solicitarCategorias() && !categoriaPorFinalidade) {
+        if (consultaContinuidade == null && planejamento.solicitarCategorias() && !categoriaPorFinalidade) {
             if (planejamento.consultaCatalogo() != null) {
                 return respostaRefinamentoInvalido(planejamento);
             }
@@ -115,7 +134,9 @@ public class CatalogoInterpretacaoOrchestrator {
         }
 
         ConsultaCatalogoIa consultaMensagem = inferirConsultaCatalogo(request.mensagem());
-        ConsultaCatalogoIa consulta = planejamento.consultaCatalogo();
+        ConsultaCatalogoIa consulta = consultaContinuidade == null
+                ? planejamento.consultaCatalogo()
+                : consultaContinuidade;
         if (fluxoCatalogoPermitido(planejamento)
                 && (consulta == null || categoriaPorFinalidade)) {
             consulta = consultaMensagem;
@@ -145,7 +166,7 @@ public class CatalogoInterpretacaoOrchestrator {
             return respostaSemResultado(planejamento);
         }
 
-        if (!primeiraInferenciaDisponivel) {
+        if (!primeiraInferenciaDisponivel || consultaContinuidade != null) {
             return respostaDeterministicaProdutos(planejamento, produtos);
         }
 
@@ -320,6 +341,59 @@ public class CatalogoInterpretacaoOrchestrator {
             );
         }
         return null;
+    }
+
+    private ConsultaCatalogoIa inferirConsultaCatalogoDaConversa(
+            String mensagemAtual,
+            List<MensagemConversa> historico
+    ) {
+        if (!confirmacaoCurta(mensagemAtual) || historico == null || historico.size() < 2) {
+            return null;
+        }
+
+        String atual = normalizarConfirmacao(mensagemAtual);
+        boolean mensagemAtualIgnorada = false;
+        boolean botOfereceuConsulta = false;
+        for (int indice = historico.size() - 1; indice >= 0; indice--) {
+            MensagemConversa mensagem = historico.get(indice);
+            if (mensagem == null || mensagem.conteudo() == null) {
+                continue;
+            }
+
+            if (mensagem.direcao() == DirecaoMensagemEnum.CLIENTE
+                    && !mensagemAtualIgnorada
+                    && normalizarConfirmacao(mensagem.conteudo()).equals(atual)) {
+                mensagemAtualIgnorada = true;
+                continue;
+            }
+
+            if (mensagem.direcao() == DirecaoMensagemEnum.BOT) {
+                botOfereceuConsulta = botOfereceuConsulta || botOfereceConsultaCatalogo(mensagem.conteudo());
+                continue;
+            }
+
+            if (mensagem.direcao() == DirecaoMensagemEnum.CLIENTE) {
+                return botOfereceuConsulta ? inferirConsultaCatalogo(mensagem.conteudo()) : null;
+            }
+        }
+        return null;
+    }
+
+    private boolean botOfereceConsultaCatalogo(String mensagem) {
+        String texto = normalizarConfirmacao(mensagem);
+        return texto.contains("categoria")
+                && contemTodosOuPadroes(texto, "listar", "mostrar", "consultar");
+    }
+
+    private boolean confirmacaoCurta(String mensagem) {
+        return CONFIRMACOES_CURTAS.contains(normalizarConfirmacao(mensagem));
+    }
+
+    private String normalizarConfirmacao(String mensagem) {
+        return normalizar(mensagem)
+                .replaceAll("[^a-z0-9 ]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 
     private boolean mensagemDefineCategoriaPorFinalidade(String mensagem) {

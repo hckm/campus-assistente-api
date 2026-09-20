@@ -37,6 +37,12 @@ public class AzureOpenAiToolExecutor {
     private static final String BUSCAR_POR_NOME = "buscar_produtos_por_nome";
     private static final String BUSCAR_POR_PRECO = "buscar_produtos_por_faixa_preco";
     private static final String CONSULTAR_ESTABELECIMENTO = "consultar_estabelecimento";
+    private static final Set<String> FERRAMENTAS_CATALOGO = Set.of(
+            LISTAR_CATEGORIAS,
+            BUSCAR_POR_CATEGORIA,
+            BUSCAR_POR_NOME,
+            BUSCAR_POR_PRECO
+    );
 
     private static final List<Map<String, Object>> FERRAMENTAS = List.of(
             ferramenta(
@@ -98,10 +104,14 @@ public class AzureOpenAiToolExecutor {
     ) {
         List<Map<String, Object>> mensagens = new ArrayList<>(mensagensIniciais);
         int chamadasExecutadas = 0;
+        boolean catalogoConsultado = false;
 
         for (int rodada = 0; rodada < MAX_RODADAS; rodada++) {
             AzureOpenAiChatResponse response = client.obterRespostaComFerramentas(mensagens, FERRAMENTAS);
             if (!response.hasToolCalls()) {
+                if (!catalogoConsultado && respostaExigeConsultaCatalogo(response.content())) {
+                    throw respostaInvalida("Azure OpenAI respondeu sobre produtos sem consultar o catalogo");
+                }
                 return response.content();
             }
 
@@ -113,6 +123,7 @@ public class AzureOpenAiToolExecutor {
             mensagens.add(mensagemAssistente(response.toolCalls()));
             for (AzureOpenAiToolCall toolCall : response.toolCalls()) {
                 log.debug("Executando ferramenta somente leitura do Azure OpenAI: {}", toolCall.name());
+                catalogoConsultado = catalogoConsultado || FERRAMENTAS_CATALOGO.contains(toolCall.name());
                 String resultado = executarFerramenta(toolCall);
                 mensagens.add(Map.of(
                         "role", "tool",
@@ -148,19 +159,50 @@ public class AzureOpenAiToolExecutor {
     private List<Map<String, Object>> buscarPorCategoria(JsonNode argumentos) {
         validarCampos(argumentos, Set.of("categoria"));
         String categoria = texto(argumentos, "categoria", 60);
-        return produtos(catalogoStore.listarPorCategoriaLimitada(
-                categoria,
-                properties.limiteItensResolvido()
-        ));
+        return produtos(buscarCategoriaComResolucao(categoria));
     }
 
     private List<Map<String, Object>> buscarPorNome(JsonNode argumentos) {
         validarCampos(argumentos, Set.of("termo"));
         String termo = texto(argumentos, "termo", 160);
-        return produtos(catalogoStore.pesquisarPorProdutoLimitado(
+        List<ProdutoCatalogo> encontrados = catalogoStore.pesquisarPorProdutoLimitado(
                 termo,
                 properties.limiteItensResolvido()
-        ));
+        );
+        return produtos(encontrados.isEmpty() ? buscarCategoriaResolvida(termo) : encontrados);
+    }
+
+    private List<ProdutoCatalogo> buscarCategoriaComResolucao(String termo) {
+        List<ProdutoCatalogo> encontrados = catalogoStore.listarPorCategoriaLimitada(
+                termo,
+                properties.limiteItensResolvido()
+        );
+        return encontrados.isEmpty() ? buscarCategoriaResolvida(termo) : encontrados;
+    }
+
+    private List<ProdutoCatalogo> buscarCategoriaResolvida(String termo) {
+        String categoria = CatalogoCategoriaMatcher.resolver(
+                        termo,
+                        catalogoStore.listarCategoriasLimitadas(CatalogoStore.LIMITE_MAXIMO_CONSULTA_IA)
+                )
+                .orElse(null);
+        if (categoria == null) {
+            return List.of();
+        }
+        return catalogoStore.listarPorCategoriaLimitada(
+                categoria,
+                properties.limiteItensResolvido()
+        );
+    }
+
+    private boolean respostaExigeConsultaCatalogo(String conteudo) {
+        try {
+            JsonNode resposta = objectMapper.readTree(conteudo);
+            return resposta != null
+                    && "COMPRA_PRODUTO".equals(resposta.path("tipoSolicitacao").asText());
+        } catch (JsonProcessingException exception) {
+            return false;
+        }
     }
 
     private List<Map<String, Object>> buscarPorPreco(JsonNode argumentos) {

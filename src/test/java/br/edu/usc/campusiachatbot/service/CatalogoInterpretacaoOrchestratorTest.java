@@ -390,6 +390,36 @@ class CatalogoInterpretacaoOrchestratorTest {
         verify(catalogoStore).listarPorCategoriaLimitada("emagrecimento", 8);
     }
 
+    @Test
+    void falhaDoAzureAindaResolvePerguntaPorFinalidadeComCategoriaReal() {
+        when(catalogoStore.listarPorCategoriaLimitada("emagrecer", 8)).thenReturn(List.of());
+        when(catalogoStore.listarCategoriasLimitadas(CatalogoStore.LIMITE_MAXIMO_CONSULTA_IA))
+                .thenReturn(List.of("Beleza", "Emagrecimento", "Saúde"));
+        when(catalogoStore.listarPorCategoriaLimitada("Emagrecimento", 8))
+                .thenReturn(List.of(produto("Emagrecimento", "Detox 10 Dias", "39.90")));
+        InferenciaIa inferencia = contents -> {
+            throw new IllegalStateException("falha simulada");
+        };
+
+        InterpretacaoIaResponseDTO resposta = orchestrator.interpretar(
+                new ChatbotRequestDTO(
+                        "14999999999",
+                        "Cliente",
+                        "Qual o produto que vc tem para emagrecer?",
+                        null
+                ),
+                EnderecoEnriquecidoDTO.vazio(),
+                List.of(),
+                inferencia,
+                "AZURE_OPENAI",
+                true
+        );
+
+        assertThat(resposta.respostaGerada()).contains("Detox 10 Dias", "39,90");
+        assertThat(resposta.necessitaAtendimentoHumano()).isFalse();
+        verify(catalogoStore).listarPorCategoriaLimitada("Emagrecimento", 8);
+    }
+
     private InterpretacaoIaResponseDTO interpretar(String mensagem, InferenciaSequencial inferencia) {
         return orchestrator.interpretar(
                 new ChatbotRequestDTO("14999999999", "Cliente", mensagem, null),

@@ -137,6 +137,79 @@ class AzureOpenAiToolExecutorTest {
     }
 
     @Test
+    void deveResolverEmagrecerParaCategoriaRealQuandoModeloUsarCategoriaLiteral() {
+        ProdutoCatalogo produto = produtoEmagrecimento();
+        when(catalogoStore.listarPorCategoriaLimitada("emagrecer", 8)).thenReturn(List.of());
+        when(catalogoStore.listarCategoriasLimitadas(CatalogoStore.LIMITE_MAXIMO_CONSULTA_IA))
+                .thenReturn(List.of("Beleza", "Emagrecimento", "Saúde"));
+        when(catalogoStore.listarPorCategoriaLimitada("Emagrecimento", 8)).thenReturn(List.of(produto));
+        when(client.obterRespostaComFerramentas(any(), any())).thenReturn(
+                new AzureOpenAiChatResponse(null, List.of(new AzureOpenAiToolCall(
+                        "call_categoria",
+                        "buscar_produtos_por_categoria",
+                        "{\"categoria\":\"emagrecer\"}"
+                ))),
+                new AzureOpenAiChatResponse("{\"respostaGerada\":\"Detox 10 Dias custa R$ 39,90\"}", List.of())
+        );
+
+        String resposta = executor.executar(
+                client,
+                List.of(Map.of("role", "user", "content", "Produto para emagrecer"))
+        );
+
+        assertThat(resposta).contains("Detox 10 Dias", "39,90");
+        verify(catalogoStore).listarPorCategoriaLimitada("Emagrecimento", 8);
+    }
+
+    @Test
+    void deveResolverEmagrecerParaCategoriaRealQuandoModeloUsarNomeLiteral() {
+        ProdutoCatalogo produto = produtoEmagrecimento();
+        when(catalogoStore.pesquisarPorProdutoLimitado("emagrecer", 8)).thenReturn(List.of());
+        when(catalogoStore.listarCategoriasLimitadas(CatalogoStore.LIMITE_MAXIMO_CONSULTA_IA))
+                .thenReturn(List.of("Beleza", "Emagrecimento", "Saúde"));
+        when(catalogoStore.listarPorCategoriaLimitada("Emagrecimento", 8)).thenReturn(List.of(produto));
+        when(client.obterRespostaComFerramentas(any(), any())).thenReturn(
+                new AzureOpenAiChatResponse(null, List.of(new AzureOpenAiToolCall(
+                        "call_nome",
+                        "buscar_produtos_por_nome",
+                        "{\"termo\":\"emagrecer\"}"
+                ))),
+                new AzureOpenAiChatResponse("{\"respostaGerada\":\"Detox 10 Dias custa R$ 39,90\"}", List.of())
+        );
+
+        executor.executar(client, List.of(Map.of("role", "user", "content", "Produto para emagrecer")));
+
+        verify(catalogoStore).listarPorCategoriaLimitada("Emagrecimento", 8);
+    }
+
+    @Test
+    void deveRejeitarRespostaDeProdutoSemConsultarFerramentaDeCatalogo() {
+        when(client.obterRespostaComFerramentas(any(), any())).thenReturn(new AzureOpenAiChatResponse("""
+                {
+                  "tipoSolicitacao": "COMPRA_PRODUTO",
+                  "categoria": "ATENDIMENTO_COMERCIAL",
+                  "respostaGerada": "Nao localizei itens.",
+                  "necessitaAtendimentoHumano": true,
+                  "motivoEncaminhamento": "Item nao localizado.",
+                  "confianca": 70,
+                  "solicitarCategorias": false,
+                  "consultaCatalogo": null
+                }
+                """, List.of()));
+
+        assertThatThrownBy(() -> executor.executar(
+                client,
+                List.of(Map.of("role", "user", "content", "Produto para emagrecer"))
+        )).isInstanceOfSatisfying(
+                AzureOpenAiClientException.class,
+                exception -> assertThat(exception.reason())
+                        .isEqualTo(AzureOpenAiClientException.Reason.INVALID_OUTPUT)
+        );
+
+        verify(catalogoStore, never()).listarPorCategoriaLimitada(any(), any(Integer.class));
+    }
+
+    @Test
     void deveConsultarDadosDoEstabelecimentoComoFerramentaSomenteLeitura() {
         when(client.obterRespostaComFerramentas(any(), any()))
                 .thenReturn(
@@ -199,5 +272,19 @@ class AzureOpenAiToolExecutorTest {
         )).isInstanceOf(AzureOpenAiClientException.class);
 
         verify(catalogoStore, never()).listarPorFaixaDePrecoLimitada(any(), any(), any(Integer.class));
+    }
+
+    private ProdutoCatalogo produtoEmagrecimento() {
+        return new ProdutoCatalogo(
+                "produto:18",
+                null,
+                18,
+                "Emagrecimento",
+                "Detox 10 Dias",
+                "Descrição segura",
+                new BigDecimal("39.90"),
+                null,
+                null
+        );
     }
 }

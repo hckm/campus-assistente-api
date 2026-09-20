@@ -214,8 +214,8 @@ public class CatalogoInterpretacaoOrchestrator {
     private List<ProdutoCatalogo> executarConsulta(ConsultaCatalogoIa consulta) {
         int limite = properties.limiteItensResolvido();
         List<ProdutoCatalogo> produtos = switch (consulta.operacao()) {
-            case BUSCAR_CATEGORIA -> catalogoStore.listarPorCategoriaLimitada(consulta.categoria().trim(), limite);
-            case BUSCAR_PRODUTO -> catalogoStore.pesquisarPorProdutoLimitado(consulta.termo().trim(), limite);
+            case BUSCAR_CATEGORIA -> buscarCategoriaComResolucao(consulta.categoria().trim(), limite);
+            case BUSCAR_PRODUTO -> buscarProdutoComResolucao(consulta.termo().trim(), limite);
             case BUSCAR_FAIXA_PRECO -> catalogoStore.listarPorFaixaDePrecoLimitada(
                     consulta.precoMinimo(),
                     consulta.precoMaximo(),
@@ -223,6 +223,25 @@ public class CatalogoInterpretacaoOrchestrator {
             );
         };
         return produtos.stream().limit(limite).toList();
+    }
+
+    private List<ProdutoCatalogo> buscarCategoriaComResolucao(String termo, int limite) {
+        List<ProdutoCatalogo> encontrados = catalogoStore.listarPorCategoriaLimitada(termo, limite);
+        return encontrados.isEmpty() ? buscarCategoriaResolvida(termo, limite) : encontrados;
+    }
+
+    private List<ProdutoCatalogo> buscarProdutoComResolucao(String termo, int limite) {
+        List<ProdutoCatalogo> encontrados = catalogoStore.pesquisarPorProdutoLimitado(termo, limite);
+        return encontrados.isEmpty() ? buscarCategoriaResolvida(termo, limite) : encontrados;
+    }
+
+    private List<ProdutoCatalogo> buscarCategoriaResolvida(String termo, int limite) {
+        return CatalogoCategoriaMatcher.resolver(
+                        termo,
+                        catalogoStore.listarCategoriasLimitadas(CatalogoStore.LIMITE_MAXIMO_CONSULTA_IA)
+                )
+                .map(categoria -> catalogoStore.listarPorCategoriaLimitada(categoria, limite))
+                .orElseGet(List::of);
     }
 
     private boolean fluxoCatalogoPermitido(RespostaInterpretacaoIaInterna planejamento) {
@@ -259,6 +278,19 @@ public class CatalogoInterpretacaoOrchestrator {
                     null,
                     decimal(faixa.group(1)),
                     decimal(faixa.group(2))
+            );
+        }
+
+        Matcher finalidade = Pattern.compile(
+                "\\bprodutos?\\b[^?!.]{0,80}?\\bpara\\s+([a-z0-9 _-]{2,60}?)(?=[?!.]*$)"
+        ).matcher(texto);
+        if (finalidade.find()) {
+            return new ConsultaCatalogoIa(
+                    ConsultaCatalogoOperacao.BUSCAR_CATEGORIA,
+                    null,
+                    finalidade.group(1).trim(),
+                    null,
+                    null
             );
         }
 
